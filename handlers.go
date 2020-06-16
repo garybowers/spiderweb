@@ -36,13 +36,15 @@ func index(res http.ResponseWriter, req *http.Request) {
 
 func logout(res http.ResponseWriter, req *http.Request) {
 	session, err := store.Get(req, cookieName)
-	user := getUser(session)
-
 	if err != nil {
 		http.Error(res, err.Error(), http.StatusInternalServerError)
 		log.Println(req.RemoteAddr, err.Error())
 		return
 	}
+
+	user := getUser(session)
+	destroyEnvironment(user)
+
 	session.Options.MaxAge = -1
 	err = session.Save(req, res)
 	if err != nil {
@@ -51,7 +53,6 @@ func logout(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	destroyEnvironment(user)
 	http.Redirect(res, req, "/dashboard/", http.StatusFound)
 }
 
