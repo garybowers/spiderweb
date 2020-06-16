@@ -1,0 +1,138 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: spider
+  labels:
+    istio-injection: enabled
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: spiderweb-svc
+  namespace: spider    
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: spider
+  name: spiderweb
+  labels:
+    app: spiderweb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spiderweb
+  template:
+    metadata:
+      labels:
+        app: spiderweb
+    spec:
+      serviceAccountName: spiderweb-svc
+      containers:
+      - name: spiderweb
+        image: garybowers/spiderweb:0.23
+        ports:
+        - name: http
+          protocol: TCP
+          containerPort: 8080
+        env:
+        - name: "GOOGLE_CLIENT_ID"
+          value: "108161629208-k1nsnmtffs11ce7rm9j9gbuejkh49erb.apps.googleusercontent.com"
+        - name: "GOOGLE_CLIENT_SECRET"
+          value: "VnB3IQ1N98z5XdNtMSXlt0Wf"
+        - name: "OAUTH_CALLBACK_URL"
+          value: "https://spider.ssp.immersion.dev/auth/google/callback"
+        - name: "SPIDER_IMAGE"
+          value: gcr.io/dvlp-shared-services-852133/spider:0.48
+        - name: "SPIDER_NAMESPACE"
+          value: "spider"
+        - name: "SPIDER_APPNAME"
+          value: "spider" 
+        - name: "SPIDERWEB_LISTEN_PORT"
+          value: "8080"
+        - name: "SPIDER_NFS_SERVER"
+          value: "nfs-server.default.svc.cluster.local"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spiderweb
+  namespace: spider
+  labels:
+    app: spiderweb
+spec:
+  selector:
+    app: spiderweb
+  ports:
+  - name: tcp-spiderweb
+    port: 80
+    targetPort: 8080
+    protocol: TCP
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: spiderweb-vs 
+  namespace: default 
+spec:
+  gateways:
+  - ingress-gateway
+  hosts:
+  - spider.ssp.immersion.dev
+  http:
+  - match:
+    - uri:
+        prefix: "/"
+    route: 
+    - destination:
+        host: spiderweb.spider.svc.cluster.local 
+        port:
+          number: 80
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: google
+spec:
+  hosts:
+  - oauth2.googleapis.com
+  ports:
+  - number: 443
+    name: https
+    protocol: HTTPS
+  resolution: DNS
+  location: MESH_EXTERNAL
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: spider
+  name: spider-deployment-manager
+rules:
+- apiGroups: ["apps"] # "" indicates the core API group
+  resources: ["deployments"]
+  verbs: ["get", "watch", "list", "create", "delete"]
+- apiGroups: [""] # "" indicates the core API group
+  resources: ["services"]
+  verbs: ["get", "watch", "list", "create", "delete"]
+- apiGroups: [""] # "" indicates the core API group
+  resources: ["persistentvolumeclaims"]
+  verbs: ["get", "watch", "list", "create", "delete"]
+- apiGroups: [""] # "" indicates the core API group
+  resources: ["persistentvolumes"]
+  verbs: ["get", "watch", "list", "create", "delete"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: spider-deployment-manager-binding
+  namespace: spider
+subjects:
+- kind: ServiceAccount
+  name: spiderweb-svc 
+roleRef:
+  kind: Role
+  name: spider-deployment-manager
+  apiGroup: rbac.authorization.k8s.io

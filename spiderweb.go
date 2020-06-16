@@ -5,14 +5,24 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
-	"net/http"
-
 	"log"
+	"net/http"
+	"os"
 	"strings"
+
+	appsv1 "k8s.io/api/apps/v1"
+	apiv1 "k8s.io/api/core/v1"
+	//"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"spiderweb/kubernetes"
 )
 
 type User struct {
+	Email         string
 	Username      string
+	Forename      string
+	Surname       string
 	Authenticated bool
 }
 
@@ -30,8 +40,12 @@ type userData struct {
 
 var store *sessions.CookieStore
 var googUser *userData
+var image string
+var namespace string
+var appname string
+var port string
+var nfsserver string
 
-const port string = ":8080"
 const cookieName string = "spiderweb-app"
 
 func init() {
@@ -55,33 +69,40 @@ func init() {
 func main() {
 	log.Print("SpIDErweb Startup")
 
+	image = os.Getenv("SPIDER_IMAGE")
+	namespace = os.Getenv("SPIDER_NAMESPACE")
+	appname = os.Getenv("SPIDER_APPNAME")
+	port = ":" + os.Getenv("SPIDERWEB_LISTEN_PORT")
+
 	router := mux.NewRouter()
 	router.HandleFunc("/auth/google/login", oauthGoogleLogin)
 	router.HandleFunc("/auth/google/callback", oauthGoogleCallback)
 	router.HandleFunc("/", index)
+	router.HandleFunc("/dashboard/", dashboard)
 	router.HandleFunc("/session/{rest:.*}", session)
-	router.HandleFunc("/logout", logout)
+	router.HandleFunc("/logout/", logout)
+	router.HandleFunc("/favicon.ico", faviconHandler)
 	log.Print("Listening on port ", port)
 	http.ListenAndServe(port, router)
-	//kubernetes.Deploy()
 }
 
-func getBackendURL() string {
-	backendUrl := "https://spider.ssp.immersion.dev"
-
-	//log.Println(backendUrl)
-	name := cleanName(googUser.Name)
-	//log.Println(name)
-
+func getBackendURL(username string) string {
+	name := cleanName(username)
 	newBeUrl := "http://" + name + ":3000"
-	log.Println(newBeUrl)
-
-	return backendUrl
+	log.Println(username, newBeUrl)
+	return newBeUrl
 }
 
 func cleanName(givenName string) string {
 	name := strings.ToLower(strings.Replace(givenName, " ", "", -1))
 	return name
+}
+
+func cleanEmail(email string) string {
+	var e string = email
+	e = strings.ToLower(strings.Replace(e, "@", "-", -1))
+	e = strings.ToLower(strings.Replace(e, ".", "-", -1))
+	return e
 }
 
 func getUser(s *sessions.Session) User {
@@ -92,4 +113,172 @@ func getUser(s *sessions.Session) User {
 		return User{Authenticated: false}
 	}
 	return user
+}
+
+func destroyEnvironment(user User) {
+	kubernetes.DeleteDeployment(namespace, cleanEmail(user.Email))
+	kubernetes.DeleteService(namespace, cleanEmail(user.Email))
+	kubernetes.DeletePersistentVolumeClaim(namespace, "pvc-"+appname+"-"+cleanEmail(user.Email))
+}
+
+func createEnvironment(user User) {
+
+	nfserver := os.Getenv("SPIDER_NFS_SERVER")
+
+	/*
+		pvSpec := &apiv1.PersistentVolume{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pv-" + appname + "-" + cleanEmail(user.Email),
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":      "spider",
+					"forename": user.Forename,
+					"surname":  user.Surname,
+					"email":    cleanEmail(user.Email),
+				},
+			},
+			Spec: apiv1.PersistentVolumeSpec{
+				Capacity: apiv1.ResourceList{
+					apiv1.ResourceName(apiv1.ResourceStorage): resource.MustParse("80Gi"),
+				},
+				PersistentVolumeSource: apiv1.PersistentVolumeSource{
+					NFS: &apiv1.NFSVolumeSource{
+						Server:   nfserver,
+						Path:     nfspath,
+						ReadOnly: false,
+					},
+				},
+				AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce, apiv1.ReadOnlyMany},
+				ClaimRef: &apiv1.ObjectReference{
+					Namespace: namespace,
+					Name:      "pvc-" + appname + "-" + cleanEmail(user.Email),
+				},
+			},
+		}
+
+		pvcSpec := &apiv1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pvc-" + appname + "-" + cleanEmail(user.Email),
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":      "spider",
+					"forename": user.Forename,
+					"surname":  user.Surname,
+					"email":    cleanEmail(user.Email),
+				},
+			},
+			Spec: apiv1.PersistentVolumeClaimSpec{
+				AccessModes: []apiv1.PersistentVolumeAccessMode{
+					apiv1.ReadWriteOnce,
+				},
+				Resources: apiv1.ResourceRequirements{
+					Requests: apiv1.ResourceList{
+						apiv1.ResourceName(apiv1.ResourceStorage): resource.MustParse("80Gi"),
+					},
+				},
+			},
+		}
+	*/
+
+	serviceSpec := &apiv1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cleanEmail(user.Email),
+			Namespace: namespace,
+			Labels: map[string]string{
+				"app":      appname,
+				"forename": user.Forename,
+				"surname":  user.Surname,
+				"email":    cleanEmail(user.Email),
+			},
+		},
+		Spec: apiv1.ServiceSpec{
+			Ports: []apiv1.ServicePort{{
+				Port:       3000,
+				TargetPort: intstr.FromInt(3000),
+			}},
+			Selector: map[string]string{
+				"app":      appname,
+				"forename": user.Forename,
+				"surname":  user.Surname,
+				"email":    cleanEmail(user.Email),
+			},
+		},
+	}
+
+	deploymentSpec := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cleanEmail(user.Email),
+			Namespace: namespace,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: int32Ptr(1),
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app":      appname,
+					"forename": user.Forename,
+					"surname":  user.Surname,
+					"email":    cleanEmail(user.Email),
+				},
+			},
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app":      appname,
+						"forename": user.Forename,
+						"surname":  user.Surname,
+						"email":    cleanEmail(user.Email),
+					},
+				},
+				Spec: apiv1.PodSpec{
+					SecurityContext: &apiv1.PodSecurityContext{
+						RunAsUser:  int64Ptr(1001),
+						RunAsGroup: int64Ptr(1001),
+						FSGroup:    int64Ptr(2000),
+					},
+					Containers: []apiv1.Container{
+						{
+							Name:  user.Username,
+							Image: image,
+							Ports: []apiv1.ContainerPort{
+								{
+									Name:          "http",
+									Protocol:      apiv1.ProtocolTCP,
+									ContainerPort: 3000,
+								},
+							},
+							VolumeMounts: []apiv1.VolumeMount{
+								{
+									Name:      "home-directory",
+									MountPath: "/home/coder/workspace",
+									SubPath:   appname + "/" + cleanEmail(user.Email),
+								},
+							},
+							Env: []apiv1.EnvVar{
+								{
+									Name:  "USER",
+									Value: user.Forename,
+								},
+							},
+						},
+					},
+					Volumes: []apiv1.Volume{
+						{
+							Name: "home-directory",
+							VolumeSource: apiv1.VolumeSource{
+								NFS: &apiv1.NFSVolumeSource{
+									Server:   nfserver,
+									Path:     "/",
+									ReadOnly: false,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	//kubernetes.CreatePersistentVolume(namespace, pvSpec)
+	//kubernetes.CreatePersistentVolumeClaim(namespace, pvcSpec)
+	kubernetes.CreateService(namespace, serviceSpec)
+	kubernetes.CreateDeployment(namespace, deploymentSpec)
 }

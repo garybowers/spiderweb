@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 	//"github.com/gorilla/sessions"
 )
@@ -19,7 +20,7 @@ import (
 //var store = sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
 
 var googleOauthConfig = &oauth2.Config{
-	RedirectURL:  "http://localhost:8080/auth/google/callback",
+	RedirectURL:  os.Getenv("OAUTH_CALLBACK_URL"),
 	ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 	ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
 	Scopes: []string{"https://www.googleapis.com/auth/userinfo.email",
@@ -64,7 +65,7 @@ func oauthGoogleCallback(res http.ResponseWriter, req *http.Request) {
 	data, err := getUserDataFromGoogle(req.FormValue("code"))
 	if err != nil {
 		log.Println(req.RemoteAddr, err.Error())
-		http.Redirect(res, req, "/fail", http.StatusInternalServerError)
+		http.Redirect(res, req, "/fail/", http.StatusInternalServerError)
 		return
 	}
 
@@ -72,13 +73,14 @@ func oauthGoogleCallback(res http.ResponseWriter, req *http.Request) {
 		log.Println(err)
 	}
 
-	username := googUser.Email
-
 	user := &User{
-		Username:      username,
+		Email:         strings.ToLower(googUser.Email),
+		Username:      strings.Replace(strings.ToLower(googUser.Name), " ", "", -1),
+		Forename:      strings.ToLower(googUser.GivenName),
+		Surname:       strings.ToLower(googUser.FamilyName),
 		Authenticated: true,
 	}
-	log.Println("Creating session for ", username)
+	log.Println("Creating session for ", googUser.Email)
 	session.Values["user"] = user
 	session.Save(req, res)
 
