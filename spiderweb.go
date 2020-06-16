@@ -38,13 +38,15 @@ type userData struct {
 	Hd            string `json:"hd"`
 }
 
-var store *sessions.CookieStore
-var googUser *userData
-var image string
-var namespace string
-var appname string
-var port string
-var nfsserver string
+var (
+	store     *sessions.CookieStore
+	googUser  *userData
+	image     string
+	namespace string
+	appname   string
+	port      string
+	nfsserver string
+)
 
 const cookieName string = "spiderweb-app"
 
@@ -122,63 +124,7 @@ func destroyEnvironment(user User) {
 }
 
 func createEnvironment(user User) {
-
 	nfserver := os.Getenv("SPIDER_NFS_SERVER")
-
-	/*
-		pvSpec := &apiv1.PersistentVolume{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "pv-" + appname + "-" + cleanEmail(user.Email),
-				Namespace: namespace,
-				Labels: map[string]string{
-					"app":      "spider",
-					"forename": user.Forename,
-					"surname":  user.Surname,
-					"email":    cleanEmail(user.Email),
-				},
-			},
-			Spec: apiv1.PersistentVolumeSpec{
-				Capacity: apiv1.ResourceList{
-					apiv1.ResourceName(apiv1.ResourceStorage): resource.MustParse("80Gi"),
-				},
-				PersistentVolumeSource: apiv1.PersistentVolumeSource{
-					NFS: &apiv1.NFSVolumeSource{
-						Server:   nfserver,
-						Path:     nfspath,
-						ReadOnly: false,
-					},
-				},
-				AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce, apiv1.ReadOnlyMany},
-				ClaimRef: &apiv1.ObjectReference{
-					Namespace: namespace,
-					Name:      "pvc-" + appname + "-" + cleanEmail(user.Email),
-				},
-			},
-		}
-
-		pvcSpec := &apiv1.PersistentVolumeClaim{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "pvc-" + appname + "-" + cleanEmail(user.Email),
-				Namespace: namespace,
-				Labels: map[string]string{
-					"app":      "spider",
-					"forename": user.Forename,
-					"surname":  user.Surname,
-					"email":    cleanEmail(user.Email),
-				},
-			},
-			Spec: apiv1.PersistentVolumeClaimSpec{
-				AccessModes: []apiv1.PersistentVolumeAccessMode{
-					apiv1.ReadWriteOnce,
-				},
-				Resources: apiv1.ResourceRequirements{
-					Requests: apiv1.ResourceList{
-						apiv1.ResourceName(apiv1.ResourceStorage): resource.MustParse("80Gi"),
-					},
-				},
-			},
-		}
-	*/
 
 	serviceSpec := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -277,8 +223,6 @@ func createEnvironment(user User) {
 			},
 		},
 	}
-	//kubernetes.CreatePersistentVolume(namespace, pvSpec)
-	//kubernetes.CreatePersistentVolumeClaim(namespace, pvcSpec)
 	kubernetes.CreateService(namespace, serviceSpec)
 	kubernetes.CreateDeployment(namespace, deploymentSpec)
 }

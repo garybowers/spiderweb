@@ -45,7 +45,7 @@ spec:
         - name: "OAUTH_CALLBACK_URL"
           value: "https://spider.ssp.immersion.dev/auth/google/callback"
         - name: "SPIDER_IMAGE"
-          value: gcr.io/dvlp-shared-services-852133/spider:0.48
+          value: gcr.io/dvlp-shared-services-852133/spider:0.49
         - name: "SPIDER_NAMESPACE"
           value: "spider"
         - name: "SPIDER_APPNAME"
