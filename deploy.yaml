@@ -32,7 +32,7 @@ spec:
       serviceAccountName: spiderweb-svc
       containers:
       - name: spiderweb
-        image: garybowers/spiderweb:0.23
+        image: garybowers/spiderweb:0.26
         ports:
         - name: http
           protocol: TCP
@@ -45,7 +45,7 @@ spec:
         - name: "OAUTH_CALLBACK_URL"
           value: "https://spider.ssp.immersion.dev/auth/google/callback"
         - name: "SPIDER_IMAGE"
-          value: gcr.io/dvlp-shared-services-852133/spider:0.49
+          value: gcr.io/dvlp-shared-services-852133/spider:0.54
         - name: "SPIDER_NAMESPACE"
           value: "spider"
         - name: "SPIDER_APPNAME"
@@ -136,3 +136,4 @@ roleRef:
   kind: Role
   name: spider-deployment-manager
   apiGroup: rbac.authorization.k8s.io
+    

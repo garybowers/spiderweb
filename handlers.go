@@ -37,7 +37,7 @@ func index(res http.ResponseWriter, req *http.Request) {
 func logout(res http.ResponseWriter, req *http.Request) {
 	session, err := store.Get(req, cookieName)
 	if err != nil {
-		http.Error(res, err.Error(), http.StatusInternalServerError)
+		//http.Error(res, err.Error(), http.StatusInternalServerError)
 		log.Println(req.RemoteAddr, err.Error())
 		return
 	}
@@ -48,12 +48,14 @@ func logout(res http.ResponseWriter, req *http.Request) {
 	session.Options.MaxAge = -1
 	err = session.Save(req, res)
 	if err != nil {
-		http.Error(res, err.Error(), http.StatusInternalServerError)
+		//http.Error(res, err.Error(), http.StatusInternalServerError)
 		log.Println(req.RemoteAddr, err.Error())
 		return
 	}
-
-	http.Redirect(res, req, "/dashboard/", http.StatusFound)
+	fmt.Fprintf(res, "<html><head><title>SpIDEr</title></head><body>")
+	fmt.Fprintf(res, "Logged Out")
+	fmt.Fprintf(res, "</body></html>")
+	//http.Redirect(res, req, "/dashboard/", http.StatusFound)
 }
 
 func dashboard(res http.ResponseWriter, req *http.Request) {
@@ -127,8 +129,8 @@ func session(res http.ResponseWriter, req *http.Request) {
 	if i == 0 {
 		createEnvironment(user)
 		log.Println(req.RemoteAddr, user.Email, "Creating deployment for user %s", cleanEmail(user.Email))
-
 	}
+
 	serveReverseProxy(getBackendURL(cleanEmail(user.Email)), res, req)
 }
 

@@ -120,7 +120,6 @@ func getUser(s *sessions.Session) User {
 func destroyEnvironment(user User) {
 	kubernetes.DeleteDeployment(namespace, cleanEmail(user.Email))
 	kubernetes.DeleteService(namespace, cleanEmail(user.Email))
-	kubernetes.DeletePersistentVolumeClaim(namespace, "pvc-"+appname+"-"+cleanEmail(user.Email))
 }
 
 func createEnvironment(user User) {
@@ -194,8 +193,8 @@ func createEnvironment(user User) {
 							},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
-									Name:      "home-directory",
-									MountPath: "/home/coder/workspace",
+									Name:      "home",
+									MountPath: "/home/coder",
 									SubPath:   appname + "/" + cleanEmail(user.Email),
 								},
 							},
@@ -204,12 +203,16 @@ func createEnvironment(user User) {
 									Name:  "USER",
 									Value: user.Forename,
 								},
+								{
+									Name:  "EMAIL",
+									Value: user.Email,
+								},
 							},
 						},
 					},
 					Volumes: []apiv1.Volume{
 						{
-							Name: "home-directory",
+							Name: "home",
 							VolumeSource: apiv1.VolumeSource{
 								NFS: &apiv1.NFSVolumeSource{
 									Server:   nfserver,
