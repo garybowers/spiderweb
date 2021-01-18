@@ -1,16 +1,12 @@
-run:
-
-all: build docker deploy
+all: build docker clean 
 
 build:
 	env GOOS=linux  go build -v spiderweb
 
 docker:
-	docker build . -t spiderweb:0.26
-	docker tag spiderweb:0.26 garybowers/spiderweb:0.26
-	docker push garybowers/spiderweb:0.26
-	
-deploy:
-	kubectl apply -f .
+	docker build . -t spiderweb:${TAG}
+	docker tag spiderweb:${TAG} garybowers/spiderweb:${TAG}
+	docker push garybowers/spiderweb:${TAG}
 
-test:
+clean:
+	rm ./spiderweb

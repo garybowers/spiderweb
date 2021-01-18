@@ -45,7 +45,8 @@ var (
 	namespace string
 	appname   string
 	port      string
-	nfsserver string
+	nfserver  string
+	fqdn      string
 )
 
 const cookieName string = "spiderweb-app"
@@ -75,15 +76,15 @@ func main() {
 	namespace = os.Getenv("SPIDER_NAMESPACE")
 	appname = os.Getenv("SPIDER_APPNAME")
 	port = ":" + os.Getenv("SPIDERWEB_LISTEN_PORT")
+	nfserver = os.Getenv("SPIDER_NFS_SERVER")
+	fqdn = os.Getenv("SPIDER_FQDN")
 
 	router := mux.NewRouter()
 	router.HandleFunc("/auth/google/login", oauthGoogleLogin)
 	router.HandleFunc("/auth/google/callback", oauthGoogleCallback)
-	router.HandleFunc("/", index)
-	router.HandleFunc("/dashboard/", dashboard)
-	router.HandleFunc("/session/{rest:.*}", session)
 	router.HandleFunc("/logout/", logout)
 	router.HandleFunc("/favicon.ico", faviconHandler)
+	router.HandleFunc("/{rest:.*}", index)
 	log.Print("Listening on port ", port)
 	http.ListenAndServe(port, router)
 }
@@ -123,8 +124,6 @@ func destroyEnvironment(user User) {
 }
 
 func createEnvironment(user User) {
-	nfserver := os.Getenv("SPIDER_NFS_SERVER")
-
 	serviceSpec := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cleanEmail(user.Email),
@@ -206,6 +205,18 @@ func createEnvironment(user User) {
 								{
 									Name:  "EMAIL",
 									Value: user.Email,
+								},
+								{
+									Name:  "USER_FORENAME",
+									Value: user.Forename,
+								},
+								{
+									Name:  "USER_SURNAME",
+									Value: user.Surname,
+								},
+								{
+									Name:  "THEIA_HOSTS",
+									Value: fqdn,
 								},
 							},
 						},

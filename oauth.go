@@ -84,7 +84,7 @@ func oauthGoogleCallback(res http.ResponseWriter, req *http.Request) {
 	session.Values["user"] = user
 	session.Save(req, res)
 
-	http.Redirect(res, req, "/session/", http.StatusFound)
+	http.Redirect(res, req, "/", http.StatusFound)
 	return
 }
 

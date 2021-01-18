@@ -19,6 +19,8 @@ func clusterClient() *kubernetes.Clientset {
 	config, err := kubeConfig.ClientConfig()
 	if err != nil {
 		// Do something
+		log.Println("HELLOOOO")
+		log.Println(err.Error())
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)

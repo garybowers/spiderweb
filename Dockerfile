@@ -1,9 +1,7 @@
-FROM alpine
+FROM debian:buster-slim 
 
-RUN apk update && \
-        apk upgrade && \
-        apk add --no-cache ca-certificates openssl && \
-		update-ca-certificates 2>/dev/null || true
+RUN apt-get update -y && apt-get install -y ca-certificates openssl && \
+      update-ca-certificates 2>/dev/null || true
 
 RUN mkdir -p /usr/local/bin/spiderweb/static
 
