@@ -31,14 +31,14 @@ spec:
           containerPort: 8080
         env:
         - name: "GOOGLE_CLIENT_ID"
-          value: "990045598318-r52dk5p70kj179rsuvopimgjm35dtsab.apps.googleusercontent.com"
+          value: <PLACE YOUR CLIENT ID HERE> 
         - name: "GOOGLE_CLIENT_SECRET"
           valueFrom:
             secretKeyRef:
               name: google-client-secret
               key: GOOGLE_CLIENT_SECRET 
         - name: "OAUTH_CALLBACK_URL"
-          value: "https://spider.bowers1.com/auth/google/callback"
+          value: "https://<REPLACE WITH YOUR DOMAIN>/auth/google/callback"
         - name: "SPIDER_IMAGE"
           value: gcr.io/b1-services-230040/spider:1.9.0-beta14
         - name: "SPIDER_NAMESPACE"
@@ -48,6 +48,6 @@ spec:
         - name: "SPIDERWEB_LISTEN_PORT"
           value: "8080"
         - name: "SPIDER_NFS_SERVER"
-          value: "nfs-server.default.svc.cluster.local"
+          value: "<YOUR NFS SERVER HERE>" 
         - name: "SPIDER_FQDN"
-          value: "spider.bowers1.com"
+          value: "<YOUR DOMAIN NAME HERE>"
